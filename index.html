@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>文件下载验证</title>
+  <style>
+    :root{
+      --bg1:#0b1220;
+      --bg2:#111a2e;
+      --card:#0f1a33cc;
+      --text:#eaf0ff;
+      --muted:#a9b6d6;
+      --line:#253457;
+      --ok:#39d98a;
+      --bad:#ff5c7a;
+      --btn:#4c7dff;
+      --btn2:#3a62cc;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% 10%, #1a2a57 0%, transparent 60%),
+        radial-gradient(1000px 600px at 90% 20%, #2a1a57 0%, transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 24px;
+    }
+
+    .wrap{
+      width:min(520px, 100%);
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: clamp(18px, 4vw, 26px);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+
+    h1{
+      margin:0 0 10px;
+      font-size: clamp(18px, 3.8vw, 22px);
+      letter-spacing: .2px;
+    }
+    p{
+      margin:0 0 18px;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: clamp(14px, 3.2vw, 15px);
+    }
+
+    .field{
+      display:flex;
+      gap: 10px;
+      align-items: stretch;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .input{
+      flex: 1 1 240px;
+      display:flex;
+      align-items:center;
+      background: rgba(10,16,32,.7);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 14px;
+      min-height: 48px;
+    }
+    .input input{
+      width:100%;
+      border:0;
+      outline:none;
+      background: transparent;
+      color: var(--text);
+      font-size: 16px; /* 手机端避免缩放 */
+      letter-spacing: .6px;
+    }
+    .input input::placeholder{color:#6f82b6}
+
+    .btn{
+      flex: 0 0 auto;
+      border:0;
+      cursor:pointer;
+      border-radius: 14px;
+      padding: 12px 16px;
+      min-height: 48px;
+      font-size: 15px;
+      color: white;
+      background: linear-gradient(180deg, var(--btn), var(--btn2));
+      box-shadow: 0 10px 28px rgba(76,125,255,.28);
+      transition: transform .08s ease, filter .2s ease;
+      user-select:none;
+    }
+    .btn:active{transform: translateY(1px); filter: brightness(.95);}
+
+    .row{
+      display:flex;
+      justify-content: space-between;
+      align-items:center;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .msg{
+      min-height: 22px;
+      font-size: 14px;
+    }
+    .msg.ok{color: var(--ok);}
+    .msg.bad{color: var(--bad);}
+
+    .hint{
+      font-size: 13px;
+      color: var(--muted);
+      opacity:.9;
+    }
+
+    .tiny{
+      margin-top: 14px;
+      border-top: 1px dashed rgba(37,52,87,.75);
+      padding-top: 12px;
+      font-size: 12px;
+      color: #8da0d4;
+      line-height: 1.6;
+    }
+
+    /* iPad 横屏/竖屏都更舒服一点 */
+    @media (min-width: 768px){
+      .btn{padding: 12px 18px;}
+      .tiny{font-size: 12.5px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" role="main" aria-label="下载验证">
+      <h1>请齐予涵输入密码以下载文件</h1>
+      <p>输入正确密码后将自动跳转到下载地址；输入错误可继续尝试。</p>
+
+      <form id="pwForm" autocomplete="off">
+        <div class="field">
+          <div class="input">
+            <input
+              id="pw"
+              type="password"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              placeholder="请输入密码（数字）"
+              aria-label="密码输入框"
+              required
+            />
+          </div>
+          <button class="btn" type="submit">确认下载</button>
+        </div>
+
+        <div class="row">
+          <div id="msg" class="msg" aria-live="polite"></div>
+          <div class="hint">提示：支持回车提交</div>
+        </div>
+      </form>
+
+      <div class="tiny">
+        
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== 可配置项 ======
+    const CORRECT_PASSWORD = "0917";
+    const DOWNLOAD_URL = "https://img.iduodou.com/images/docs/20260223/DC1920A5-030E-40B5-8384-9303E0772D3A.docx?attname=sat%E5%AF%92%E5%81%87%E4%BD%9C%E4%B8%9A2%E7%AD%94%E9%A2%98%E5%8D%A1.docx";
+    // ======================
+
+    const form = document.getElementById("pwForm");
+    const pwInput = document.getElementById("pw");
+    const msg = document.getElementById("msg");
+
+    // 让用户一打开就能输入
+    window.addEventListener("load", () => pwInput.focus());
+
+    function setMsg(text, type){
+      msg.textContent = text || "";
+      msg.className = "msg" + (type ? (" " + type) : "");
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const val = (pwInput.value || "").trim();
+
+      if (!val) {
+        setMsg("请输入密码。", "bad");
+        pwInput.focus();
+        return;
+      }
+
+      if (val === CORRECT_PASSWORD) {
+        setMsg("密码正确，正在跳转下载…", "ok");
+        // 小延迟让用户看到提示
+        setTimeout(() => {
+          // 直接跳转到下载链接
+          window.location.href = DOWNLOAD_URL;
+        }, 300);
+      } else {
+        setMsg("密码错误，请再试一次。", "bad");
+        pwInput.select();
+        pwInput.focus();
+      }
+    });
+
+    // 输入时清掉错误提示
+    pwInput.addEventListener("input", () => {
+      if (msg.textContent) setMsg("", "");
+    });
+  </script>
+</body>
+</html>
